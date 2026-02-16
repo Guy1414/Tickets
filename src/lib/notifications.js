@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(import.meta.env.RESEND_APIKEY);
+const resend = new Resend("re_eXGDBWpa_LUbWt8KitcLnDZX9reoeBWmc");
 
 export const notify = (event, data) => {
     console.log(`[Notification Triggered] Event: ${event}`, data);
