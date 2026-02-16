@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import db from '../lib/db';
 import { cn } from '../lib/utils';
 import { Loader2, Lock, User, ShieldCheck } from 'lucide-react';
@@ -58,12 +58,19 @@ const Login = () => {
 
                 await loginUser(profile.display_name, pin);
             } else {
+                if (password.length < 8) {
+                    throw new Error("Admin passwords must be at least 8 characters long. If you are using a 4-digit PIN, please switch to 'User Login' mode.");
+                }
                 await loginAdmin(email, password);
             }
             // Navigation handled by useEffect
         } catch (err) {
             console.error(err);
-            setError(err.message || "Login failed. Please check your credentials.");
+            let msg = err.message || "Login failed. Please check your credentials.";
+            if (msg.toLowerCase().includes('rate limit') || err.code === 429) {
+                msg = "Too many login attempts. For security, Appwrite has temporarily locked this account. Please wait 15-60 minutes and try again.";
+            }
+            setError(msg);
             setLoading(false);
         }
     };
@@ -168,7 +175,7 @@ const Login = () => {
                 </div>
 
                 {/* Footer Switcher */}
-                <div className="p-4 bg-neutral-950/50 border-t border-neutral-800 text-center">
+                <div className="p-4 bg-neutral-950/50 border-t border-neutral-800 text-center space-y-3">
                     <button
                         onClick={() => {
                             setMode(mode === 'user' ? 'admin' : 'user');
@@ -186,6 +193,14 @@ const Login = () => {
                             </>
                         )}
                     </button>
+                    {mode === 'user' && (
+                        <Link
+                            to="/signup"
+                            className="text-sm text-blue-400 hover:text-blue-300 transition-colors inline-block"
+                        >
+                            New here? <span className="font-semibold underline underline-offset-2">Sign Up</span>
+                        </Link>
+                    )}
                 </div>
             </div>
         </div>

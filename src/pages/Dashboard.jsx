@@ -1,17 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import db from '../lib/db';
-import { Link } from 'react-router-dom';
 import { Plus, LogOut, Loader2, MessageSquare, Clock, CheckCircle, AlertCircle, ShieldCheck } from 'lucide-react';
 import { cn } from '../lib/utils';
 import CreateTicket from '../components/CreateTicket';
 import { ThemeToggle } from '../components/ThemeToggle';
 
 const Dashboard = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, verified, loading: authLoading } = useAuth();
+    const navigate = useNavigate();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+    useEffect(() => {
+        if (!authLoading && !user) {
+            navigate('/login');
+        }
+    }, [user, authLoading, navigate]);
 
     useEffect(() => {
         if (user) loadTickets();

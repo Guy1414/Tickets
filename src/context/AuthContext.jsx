@@ -54,10 +54,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
-        await authService.logout();
-        setUser(null);
-        setProfile(null);
-        setIsAdmin(false);
+        try {
+            await authService.logout();
+        } catch (error) {
+            console.error("Logout failed:", error);
+        } finally {
+            // Always clear local state
+            setUser(null);
+            setProfile(null);
+            setIsAdmin(false);
+        }
     };
 
     const value = {
@@ -81,3 +87,5 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+export default AuthProvider;

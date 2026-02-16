@@ -7,7 +7,7 @@ import { cn } from '../lib/utils';
 import { ThemeToggle } from '../components/ThemeToggle';
 
 const Admin = () => {
-    const { user, isAdmin, logout } = useAuth();
+    const { user, isAdmin, logout, loading: authLoading } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('tickets'); // tickets, users, settings
     const [loading, setLoading] = useState(false);
@@ -22,14 +22,16 @@ const Admin = () => {
     const [newUserValues, setNewUserValues] = useState({ name: '', pin: '' });
 
     useEffect(() => {
-        if (user && !isAdmin) {
-            navigate('/dashboard');
-        } else if (user) {
-            loadData();
-        } else if (!user && !loading) {
+        if (authLoading) return;
+
+        if (!user) {
             navigate('/login');
+        } else if (!isAdmin) {
+            navigate('/dashboard');
+        } else {
+            loadData();
         }
-    }, [user, isAdmin, activeTab]);
+    }, [user, isAdmin, authLoading, activeTab]);
 
     const loadData = async () => {
         setLoading(true);
