@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import db from '../lib/db';
-import { Loader2, LogOut, CheckCircle, RotateCcw, Shield, Users, Settings, Plus, Trash2, ShieldCheck, Mail } from 'lucide-react';
+import { Loader2, LogOut, CheckCircle, RotateCcw, Shield, Users, Settings, Plus, Trash2, ShieldCheck, Mail, Book, AlertTriangle, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ThemeToggle } from '../components/ThemeToggle';
 
@@ -21,6 +21,9 @@ const Admin = () => {
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
     const [newUserValues, setNewUserValues] = useState({ name: '', pin: '' });
 
+    // Bulk Actions & Export
+    const [selectedTickets, setSelectedTickets] = useState([]);
+
     useEffect(() => {
         if (authLoading) return;
 
@@ -32,6 +35,69 @@ const Admin = () => {
             loadData();
         }
     }, [user, isAdmin, authLoading, activeTab]);
+
+    // ... loadData ...
+
+    const handleExport = () => {
+        const headers = ["ID", "Title", "Status", "Priority", "Created At", "Owner ID", "Description"];
+        const csvContent = [
+            headers.join(","),
+            ...tickets.map(t => [
+                t.$id,
+                `"${t.title.replace(/"/g, '""')}"`,
+                t.status,
+                t.priority,
+                t.$createdAt,
+                t.owner_id || '',
+                `"${t.description.replace(/"/g, '""').replace(/\n/g, ' ')}"`
+            ].join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tickets_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    };
+
+    const handleBulkAction = async (action) => {
+        if (!confirm(`Are you sure you want to ${action} ${selectedTickets.length} tickets?`)) return;
+        setLoading(true);
+        try {
+            const promises = selectedTickets.map(id => {
+                if (action === 'delete') return db.updateTicketStatus(id, 'closed'); // Soft delete/close
+                if (action === 'close') return db.updateTicketStatus(id, 'closed');
+                if (action === 'resolve') return db.updateTicketStatus(id, 'resolved');
+                return Promise.resolve();
+            });
+            await Promise.all(promises);
+            setSelectedTickets([]);
+            loadData();
+        } catch (error) {
+            alert("Failed to perform bulk action");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedTickets.length === tickets.length) {
+            setSelectedTickets([]);
+        } else {
+            setSelectedTickets(tickets.map(t => t.$id));
+        }
+    };
+
+    const toggleSelectTicket = (id) => {
+        if (selectedTickets.includes(id)) {
+            setSelectedTickets(prev => prev.filter(tid => tid !== id));
+        } else {
+            setSelectedTickets(prev => [...prev, id]);
+        }
+    };
+
+
 
     const loadData = async () => {
         setLoading(true);
@@ -119,6 +185,12 @@ const Admin = () => {
                     >
                         <Users className="w-5 h-5" /> User Approval
                     </button>
+                    <Link
+                        to="/knowledge-base"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300"
+                    >
+                        <Book className="w-5 h-5" /> Knowledge Base
+                    </Link>
                     <button
                         onClick={() => setActiveTab('settings')}
                         className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm", activeTab === 'settings' ? "bg-indigo-600/10 text-indigo-400 border border-indigo-600/20 shadow-inner" : "text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300")}
@@ -162,14 +234,35 @@ const Admin = () => {
                                     <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
                                     <span className="text-xs font-bold text-neutral-300 uppercase tracking-tighter">{tickets.filter(t => t.status === 'open').length} Open</span>
                                 </div>
+                                <button onClick={handleExport} className="px-4 py-2 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 rounded-xl flex items-center gap-2 text-neutral-400 hover:text-white transition-colors">
+                                    <Download className="w-4 h-4" />
+                                    <span className="text-xs font-bold uppercase tracking-tighter hidden sm:inline">Export CSV</span>
+                                </button>
                             </div>
                         </div>
 
                         {loading ? <div className="flex py-32 justify-center"><Loader2 className="animate-spin text-indigo-500 w-12 h-12" /></div> : (
-                            <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl transition-all">
+                            <div className="bg-neutral-900/40 backdrop-blur-md border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl transition-all relative">
+                                {selectedTickets.length > 0 && (
+                                    <div className="absolute top-0 inset-x-0 z-20 bg-indigo-600 text-white p-4 flex items-center justify-between animate-in slide-in-from-top-full">
+                                        <span className="font-bold">{selectedTickets.length} Selected</span>
+                                        <div className="flex gap-2">
+                                            <button onClick={() => handleBulkAction('resolve')} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold uppercase transition-colors">Mark Resolved</button>
+                                            <button onClick={() => handleBulkAction('close')} className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold uppercase transition-colors">Close</button>
+                                        </div>
+                                    </div>
+                                )}
                                 <table className="w-full text-left">
                                     <thead className="bg-neutral-900/60 border-b border-neutral-800 text-neutral-500 uppercase text-[10px] tracking-widest font-black">
                                         <tr>
+                                            <th className="px-8 py-5 w-12">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedTickets.length === tickets.length && tickets.length > 0}
+                                                    onChange={toggleSelectAll}
+                                                    className="w-4 h-4 rounded border-neutral-700 bg-neutral-800 accent-indigo-600 cursor-pointer"
+                                                />
+                                            </th>
                                             <th className="px-8 py-5">Ticket Info</th>
                                             <th className="px-8 py-5">Status</th>
                                             <th className="px-8 py-5">Priority</th>
@@ -177,37 +270,55 @@ const Admin = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-neutral-800/40">
-                                        {tickets.map(t => (
-                                            <tr key={t.$id} className="hover:bg-indigo-500/5 transition-all group">
-                                                <td className="px-8 py-6">
-                                                    <Link to={`/tickets/${t.$id}`} className="block group-hover:translate-x-1 transition-transform">
-                                                        <p className="font-bold text-neutral-100 group-hover:text-indigo-400 transition-colors truncate max-w-xs">{t.title}</p>
-                                                        <p className="text-[10px] text-neutral-500 mt-1 font-medium">{new Date(t.$createdAt).toLocaleString()}</p>
-                                                    </Link>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border",
-                                                        t.status === 'open' && "text-yellow-500 border-yellow-500/20 bg-yellow-500/10",
-                                                        t.status === 'resolved' && "text-green-500 border-green-500/20 bg-green-500/10",
-                                                        t.status === 'closed' && "text-neutral-500 border-neutral-700 bg-neutral-800/50"
-                                                    )}>{t.status.replace('_', ' ')}</span>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={cn("w-1.5 h-1.5 rounded-full",
-                                                            t.priority === 'high' ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" :
-                                                                t.priority === 'medium' ? "bg-yellow-500" : "bg-blue-500"
-                                                        )}></div>
-                                                        <span className="text-xs font-bold uppercase tracking-tight text-neutral-300">{t.priority}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6 text-right">
-                                                    <button onClick={() => handleDeleteTicket(t.$id)} className="text-neutral-600 hover:text-red-400 p-2.5 hover:bg-red-500/10 rounded-xl transition-all inline-flex items-center gap-2">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {tickets.map(t => {
+                                            const isBreached = t.priority === 'high' && t.status === 'open' && (new Date() - new Date(t.$createdAt) > 4 * 60 * 60 * 1000);
+                                            return (
+                                                <tr key={t.$id} className={cn("hover:bg-indigo-500/5 transition-all group", isBreached && "bg-red-500/5", selectedTickets.includes(t.$id) && "bg-indigo-500/10")}>
+                                                    <td className="px-8 py-6">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedTickets.includes(t.$id)}
+                                                            onChange={() => toggleSelectTicket(t.$id)}
+                                                            className="w-4 h-4 rounded border-neutral-700 bg-neutral-800 accent-indigo-600 cursor-pointer"
+                                                        />
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <Link to={`/tickets/${t.$id}`} className="block group-hover:translate-x-1 transition-transform">
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="font-bold text-neutral-100 group-hover:text-indigo-400 transition-colors truncate max-w-xs">{t.title}</p>
+                                                                {isBreached && (
+                                                                    <span className="flex items-center gap-1 text-[9px] font-black uppercase text-red-500 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-md animate-pulse">
+                                                                        <AlertTriangle className="w-3 h-3" /> SLA
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-[10px] text-neutral-500 mt-1 font-medium">{new Date(t.$createdAt).toLocaleString()}</p>
+                                                        </Link>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border",
+                                                            t.status === 'open' && "text-yellow-500 border-yellow-500/20 bg-yellow-500/10",
+                                                            t.status === 'resolved' && "text-green-500 border-green-500/20 bg-green-500/10",
+                                                            t.status === 'closed' && "text-neutral-500 border-neutral-700 bg-neutral-800/50"
+                                                        )}>{t.status.replace('_', ' ')}</span>
+                                                    </td>
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={cn("w-1.5 h-1.5 rounded-full",
+                                                                t.priority === 'high' ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" :
+                                                                    t.priority === 'medium' ? "bg-yellow-500" : "bg-blue-500"
+                                                            )}></div>
+                                                            <span className="text-xs font-bold uppercase tracking-tight text-neutral-300">{t.priority}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        <button onClick={() => handleDeleteTicket(t.$id)} className="text-neutral-600 hover:text-red-400 p-2.5 hover:bg-red-500/10 rounded-xl transition-all inline-flex items-center gap-2">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
                                     </tbody>
                                 </table>
                             </div>

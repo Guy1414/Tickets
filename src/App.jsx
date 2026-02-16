@@ -4,6 +4,7 @@ import SignUp from './pages/SignUp'
 import Dashboard from './pages/Dashboard'
 import Admin from './pages/Admin'
 import TicketDetail from './pages/TicketDetail'
+import KnowledgeBase from './pages/KnowledgeBase'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/knowledge-base" element={<KnowledgeBase />} />
         <Route path="/tickets/:id" element={<TicketDetail />} />
         <Route path="/admin" element={<Admin />} />
       </Routes>

@@ -5,6 +5,7 @@ export const CONFIG = {
         TICKETS: import.meta.env.VITE_APPWRITE_COLLECTION_TICKETS || 'tickets',
         MESSAGES: import.meta.env.VITE_APPWRITE_COLLECTION_MESSAGES || 'messages',
         SETTINGS: import.meta.env.VITE_APPWRITE_COLLECTION_SETTINGS || 'settings',
+        ARTICLES: import.meta.env.VITE_APPWRITE_COLLECTION_ARTICLES || 'articles',
     },
     BUCKETS: {
         ATTACHMENTS: import.meta.env.VITE_APPWRITE_BUCKET_ATTACHMENTS || 'attachments',

@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import db from '../lib/db';
-import { Plus, LogOut, Loader2, MessageSquare, Clock, CheckCircle, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Plus, LogOut, Loader2, MessageSquare, Clock, CheckCircle, AlertCircle, ShieldCheck, Book } from 'lucide-react';
 import { cn } from '../lib/utils';
 import CreateTicket from '../components/CreateTicket';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { useState, useEffect } from 'react';
 
 const Dashboard = () => {
     const { user, logout, verified, loading: authLoading } = useAuth();
@@ -58,6 +58,9 @@ const Dashboard = () => {
                         <span className="text-sm text-neutral-400 hidden sm:inline-block">
                             Logged in as <span className="text-neutral-200 font-medium">{user?.name}</span>
                         </span>
+                        <Link to="/knowledge-base" className="p-2 hover:bg-neutral-800 rounded-full transition-colors text-neutral-400 hover:text-purple-400" title="Knowledge Base">
+                            <Book className="w-5 h-5" />
+                        </Link>
                         <ThemeToggle />
                         <button
                             onClick={logout}

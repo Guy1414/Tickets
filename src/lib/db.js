@@ -153,6 +153,20 @@ export class DatabaseService {
         }
     }
 
+    async updateTicket(id, data) {
+        try {
+            return await databases.updateDocument(
+                CONFIG.DATABASE_ID,
+                CONFIG.COLLECTIONS.TICKETS,
+                id,
+                data
+            );
+        } catch (error) {
+            console.error("Appwrite service :: updateTicket :: error", error);
+            throw error;
+        }
+    }
+
     // Messages
     async getMessages(ticketId) {
         try {
@@ -170,7 +184,7 @@ export class DatabaseService {
         }
     }
 
-    async createMessage(ticketId, senderId, content, attachmentIds = []) {
+    async createMessage(ticketId, senderId, content, attachmentIds = [], isInternal = false) {
         try {
             return await databases.createDocument(
                 CONFIG.DATABASE_ID,
@@ -180,7 +194,8 @@ export class DatabaseService {
                     ticket_id: ticketId,
                     sender_id: senderId,
                     content,
-                    attachments: attachmentIds
+                    attachments: attachmentIds,
+                    is_internal: isInternal
                 }
             );
         } catch (error) {
@@ -228,6 +243,69 @@ export class DatabaseService {
         }
     }
 
+    // Knowledge Base
+    async getArticles(publishedOnly = true) {
+        try {
+            const queries = [Query.orderDesc('$createdAt')];
+            if (publishedOnly) {
+                queries.push(Query.equal('is_published', true));
+            }
+            return await databases.listDocuments(
+                CONFIG.DATABASE_ID,
+                CONFIG.COLLECTIONS.ARTICLES,
+                queries
+            );
+        } catch (error) {
+            console.error("Appwrite service :: getArticles :: error", error);
+            return { documents: [] };
+        }
+    }
+
+    async createArticle(title, content, category) {
+        try {
+            return await databases.createDocument(
+                CONFIG.DATABASE_ID,
+                CONFIG.COLLECTIONS.ARTICLES,
+                ID.unique(),
+                {
+                    title,
+                    content,
+                    category,
+                    is_published: true
+                }
+            );
+        } catch (error) {
+            console.error("Appwrite service :: createArticle :: error", error);
+            throw error;
+        }
+    }
+
+    async updateArticle(id, data) {
+        try {
+            return await databases.updateDocument(
+                CONFIG.DATABASE_ID,
+                CONFIG.COLLECTIONS.ARTICLES,
+                id,
+                data
+            );
+        } catch (error) {
+            console.error("Appwrite service :: updateArticle :: error", error);
+            throw error;
+        }
+    }
+
+    async deleteArticle(id) {
+        try {
+            await databases.deleteDocument(
+                CONFIG.DATABASE_ID,
+                CONFIG.COLLECTIONS.ARTICLES,
+                id
+            );
+        } catch (error) {
+            console.error("Appwrite service :: deleteArticle :: error", error);
+            throw error;
+        }
+    }
 }
 
 const db = new DatabaseService();
