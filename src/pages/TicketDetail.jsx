@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import db from '../lib/db';
 import storageService from '../lib/storage';
-import { Loader2, Send, Paperclip, CheckCircle, Clock, AlertCircle, Trash2, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Loader2, Send, Paperclip, CheckCircle, Clock, AlertCircle, Trash2, ArrowLeft, MessageSquare, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const TicketDetail = () => {
@@ -14,6 +14,7 @@ const TicketDetail = () => {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [newMessage, setNewMessage] = useState('');
+    const [files, setFiles] = useState([]);
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef(null);
 
@@ -51,18 +52,40 @@ const TicketDetail = () => {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() && files.length === 0) return;
 
         setSending(true);
         try {
-            const msg = await db.createMessage(id, user.$id, newMessage);
+            // 1. Upload Files
+            const attachmentIds = [];
+            if (files.length > 0) {
+                for (const file of files) {
+                    const res = await storageService.uploadFile(file);
+                    attachmentIds.push(res.$id);
+                }
+            }
+
+            // 2. Send Message
+            const msg = await db.createMessage(id, user.$id, newMessage, attachmentIds);
             setMessages(prev => [...prev, msg]);
             setNewMessage('');
+            setFiles([]);
         } catch (error) {
             console.error("Failed to send message", error);
+            alert("Failed to send message: " + error.message);
         } finally {
             setSending(false);
         }
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files) {
+            setFiles(prev => [...prev, ...Array.from(e.target.files)]);
+        }
+    };
+
+    const removeFile = (index) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleStatusChange = async (newStatus) => {
@@ -209,6 +232,16 @@ const TicketDetail = () => {
                                                 : "bg-neutral-800 text-neutral-200 border border-neutral-700 rounded-tl-none"
                                         )}>
                                             <p>{msg.content}</p>
+
+                                            {/* Message Attachments */}
+                                            {msg.attachments && msg.attachments.length > 0 && (
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    {msg.attachments.map(fileId => (
+                                                        <MessageAttachment key={fileId} fileId={fileId} />
+                                                    ))}
+                                                </div>
+                                            )}
+
                                             <p className={cn("text-[10px] mt-1 opacity-50", isMe ? "text-right" : "text-left")}>
                                                 {new Date(msg.$createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </p>
@@ -220,27 +253,90 @@ const TicketDetail = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    <form onSubmit={handleSendMessage} className="p-4 border-t border-neutral-800 bg-neutral-900/50 flex gap-2">
-                        <input
-                            type="text"
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            placeholder="Type your message..."
-                            className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
-                        />
-                        <button
-                            type="submit"
-                            disabled={sending || !newMessage.trim()}
-                            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
-                        >
-                            {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                        </button>
-                    </form>
+                    <div className="p-4 border-t border-neutral-800 bg-neutral-900/50">
+                        {/* Selected Files Preview */}
+                        {files.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {files.map((file, i) => (
+                                    <div key={i} className="flex items-center gap-2 bg-neutral-800 px-3 py-1.5 rounded-lg text-xs text-neutral-300 border border-neutral-700">
+                                        <span className="truncate max-w-[150px]">{file.name}</span>
+                                        <button onClick={() => removeFile(i)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSendMessage} className="flex gap-2">
+                            <input
+                                type="file"
+                                id="chat-file-upload"
+                                multiple
+                                className="hidden"
+                                onChange={handleFileChange}
+                            />
+                            <label
+                                htmlFor="chat-file-upload"
+                                className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg cursor-pointer transition-colors"
+                                title="Attach files"
+                            >
+                                <Paperclip className="w-5 h-5" />
+                            </label>
+
+                            <input
+                                type="text"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                placeholder="Type your message..."
+                                className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all"
+                            />
+                            <button
+                                type="submit"
+                                disabled={sending || (!newMessage.trim() && files.length === 0)}
+                                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+                            >
+                                {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
             </div>
         </div>
     );
 }
+
+const MessageAttachment = ({ fileId }) => {
+    const [isImage, setIsImage] = useState(true);
+
+    if (isImage) {
+        return (
+            <a
+                href={storageService.getFileView(fileId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block overflow-hidden rounded-lg border border-neutral-700/50 hover:border-blue-500/50 transition-colors"
+            >
+                <img
+                    src={storageService.getFilePreview(fileId)}
+                    alt="Attachment"
+                    className="max-w-[200px] max-h-[200px] object-cover"
+                    onError={() => setIsImage(false)}
+                />
+            </a>
+        );
+    }
+
+    return (
+        <a
+            href={storageService.getFileView(fileId)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-neutral-900 border border-neutral-700 hover:bg-neutral-800 transition-colors text-neutral-300"
+        >
+            <Paperclip className="w-3 h-3" />
+            <span>Attachment</span>
+        </a>
+    );
+};
 
 export default TicketDetail
