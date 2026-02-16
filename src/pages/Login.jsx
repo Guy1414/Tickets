@@ -58,10 +58,10 @@ const Login = () => {
 
                 await loginUser(profile.display_name, pin);
             } else {
-                if (password.length < 8) {
+                if (password.trim().length < 8) {
                     throw new Error("Admin passwords must be at least 8 characters long. If you are using a 4-digit PIN, please switch to 'User Login' mode.");
                 }
-                await loginAdmin(email, password);
+                await loginAdmin(email.trim(), password.trim());
             }
             // Navigation handled by useEffect
         } catch (err) {
@@ -143,6 +143,7 @@ const Login = () => {
                                     <input
                                         type="email"
                                         value={email}
+                                        autoComplete="email"
                                         onChange={(e) => setEmail(e.target.value)}
                                         className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-neutral-200 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
                                     />
@@ -152,6 +153,7 @@ const Login = () => {
                                     <input
                                         type="password"
                                         value={password}
+                                        autoComplete="current-password"
                                         onChange={(e) => setPassword(e.target.value)}
                                         className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-neutral-200 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all"
                                     />

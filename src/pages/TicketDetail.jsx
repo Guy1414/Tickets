@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import db from '../lib/db';
 import storageService from '../lib/storage';
-import { Loader2, Send, Paperclip, CheckCircle, Clock, AlertCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { Loader2, Send, Paperclip, CheckCircle, Clock, AlertCircle, Trash2, ArrowLeft, MessageSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const TicketDetail = () => {

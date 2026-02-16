@@ -115,8 +115,7 @@ export class DatabaseService {
                     description,
                     priority,
                     status: 'open',
-                    attachments: attachmentIds,
-                    createdAt: new Date().toISOString()
+                    attachments: attachmentIds
                 }
             );
             notify('ticket_created', { title, userId });
@@ -181,8 +180,7 @@ export class DatabaseService {
                     ticket_id: ticketId,
                     sender_id: senderId,
                     content,
-                    attachments: attachmentIds,
-                    createdAt: new Date().toISOString()
+                    attachments: attachmentIds
                 }
             );
         } catch (error) {

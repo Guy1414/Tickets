@@ -38,7 +38,7 @@ const CreateTicket = ({ onClose, onCreated }) => {
             onCreated();
         } catch (error) {
             console.error("Failed to create ticket", error);
-            alert("Failed to create ticket");
+            alert(error.message || "Failed to create ticket");
         } finally {
             setLoading(false);
         }

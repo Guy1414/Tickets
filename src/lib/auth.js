@@ -62,12 +62,15 @@ export class AuthService {
     async getCurrentUser() {
         try {
             const user = await account.get();
-            // Determine if admin based on label or specific attribute?
-            // For now, checks if email does NOT end with internal suffix
             const isAdmin = !user.email.endsWith(INTERNAL_EMAIL_SUFFIX);
             return { ...user, isAdmin };
         } catch (error) {
-            // Not logged in
+            // If it's a rate limit error, we want to know about it, not just return null
+            if (error.code === 429) {
+                console.warn("Appwrite service :: getCurrentUser :: Rate limited");
+                throw error;
+            }
+            // For 401 (Unauthorized), just return null
             return null;
         }
     }
